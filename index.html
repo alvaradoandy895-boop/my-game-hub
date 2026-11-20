@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Game Hub</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin: 30px; }
+    #board { display: grid; grid-template-columns: repeat(3, 90px); gap: 6px; justify-content: center; margin: 20px; }
+    .cell { height: 90px; font-size: 40px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>My Game Hub</h1>
+  <h2>Tic-Tac-Toe</h2>
+  <p id="message">X's turn</p>
+  <div id="board"></div>
+  <button onclick="resetGame()">Play again</button>
+
+  <script>
+    let cells = Array(9).fill("");
+    let turn = "X";
+    let finished = false;
+    const board = document.getElementById("board");
+    const message = document.getElementById("message");
+    const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+
+    function drawBoard() {
+      board.innerHTML = "";
+      cells.forEach((value, i) => {
+        const button = document.createElement("button");
+        button.className = "cell";
+        button.textContent = value;
+        button.onclick = () => play(i);
+        board.appendChild(button);
+      });
+    }
+
+    function play(i) {
+      if (cells[i] || finished) return;
+      cells[i] = turn;
+      const winner = wins.some(line => line.every(index => cells[index] === turn));
+
+      if (winner) {
+        message.textContent = turn + " wins!";
+        finished = true;
+      } else if (cells.every(Boolean)) {
+        message.textContent = "It's a draw!";
+        finished = true;
+      } else {
+        turn = turn === "X" ? "O" : "X";
+        message.textContent = turn + "'s turn";
+      }
+      drawBoard();
+    }
+
+    function resetGame() {
+      cells = Array(9).fill("");
+      turn = "X";
+      finished = false;
+      message.textContent = "X's turn";
+      drawBoard();
+    }
+
+    drawBoard();
+  </script>
+</body>
+</html>
