@@ -3,65 +3,138 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Snake</title>
+  <title>Snake Game</title>
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; }
-    canvas { border: 2px solid #222; background: #eee; max-width: 90vw; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #152b20;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+    h1 { color: #a8f078; }
+    #score { font-size: 1.2rem; }
+    canvas {
+      display: block;
+      width: min(90vw, 500px);
+      height: auto;
+      margin: 16px auto;
+      border: 5px solid #a8f078;
+      border-radius: 14px;
+      background: #d8f0bb;
+    }
+    button, a {
+      display: inline-block;
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 16px;
+      margin: 5px;
+      background: #a8f078;
+      color: #152b20;
+      font-weight: bold;
+      text-decoration: none;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
-  <h1>Snake</h1>
-  <p>Use the arrow keys to play. Eat the red square!</p>
+  <h1>🐍 Snake</h1>
+  <p>Use the arrow keys to move and eat the apples!</p>
   <p id="score">Score: 0</p>
-  <canvas id="game" width="400" height="400"></canvas>
-  <p><button onclick="startGame()">Start / Restart</button></p>
+  <canvas id="game" width="500" height="500"></canvas>
+  <button id="start">Start / Restart</button>
   <p><a href="index.html">Back to game menu</a></p>
 
   <script>
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
-    const size = 20;
-    let snake, food, dx, dy, score, timer;
+    const tile = 25;
+    const tiles = canvas.width / tile;
+
+    let snake, apple, direction, nextDirection, score, timer, playing;
 
     function startGame() {
       clearInterval(timer);
-      snake = [{ x: 200, y: 200 }];
-      food = { x: 100, y: 100 };
-      dx = size; dy = 0; score = 0;
-      document.getElementById("score").textContent = "Score: 0";
-      timer = setInterval(step, 120);
+      snake = [
+        { x: 10, y: 10 },
+        { x: 9, y: 10 },
+        { x: 8, y: 10 },
+        { x: 7, y: 10 }
+      ];
+      direction = { x: 1, y: 0 };
+      nextDirection = { x: 1, y: 0 };
+      score = 0;
+      playing = true;
+      placeApple();
+      updateScore();
       draw();
+      timer = setInterval(step, 130);
+    }
+
+    function placeApple() {
+      do {
+        apple = {
+          x: Math.floor(Math.random() * tiles),
+          y: Math.floor(Math.random() * tiles)
+        };
+      } while (snake.some(part => part.x === apple.x && part.y === apple.y));
+    }
+
+    function updateScore() {
+      document.getElementById("score").textContent = "Score: " + score;
     }
 
     document.addEventListener("keydown", event => {
-      const keys = {
-        ArrowUp: [0, -size], ArrowDown: [0, size],
-        ArrowLeft: [-size, 0], ArrowRight: [size, 0]
+      const moves = {
+        ArrowUp:    { x: 0, y: -1 },
+        ArrowDown:  { x: 0, y: 1 },
+        ArrowLeft:  { x: -1, y: 0 },
+        ArrowRight: { x: 1, y: 0 }
       };
-      if (!keys[event.key]) return;
+      const move = moves[event.key];
+      if (!move) return;
       event.preventDefault();
-      const [newDx, newDy] = keys[event.key];
-      if (newDx !== -dx || newDy !== -dy) { dx = newDx; dy = newDy; }
+
+      if (move.x !== -direction.x || move.y !== -direction.y) {
+        nextDirection = move;
+      }
     });
 
     function step() {
-      const head = { x: snake[0].x + dx, y: snake[0].y + dy };
-      if (head.x < 0 || head.x >= canvas.width || head.y < 0 ||
-          head.y >= canvas.height ||
-          snake.some(part => part.x === head.x && part.y === head.y)) {
+      direction = nextDirection;
+      const head = {
+        x: snake[0].x + direction.x,
+        y: snake[0].y + direction.y
+      };
+      const ateApple = head.x === apple.x && head.y === apple.y;
+
+      if (
+        head.x < 0 || head.x >= tiles ||
+        head.y < 0 || head.y >= tiles ||
+        snake.slice(0, ateApple ? undefined : -1)
+          .some(part => part.x === head.x && part.y === head.y)
+      ) {
+        playing = false;
         clearInterval(timer);
-        alert("Game over! Score: " + score);
+        draw();
+        ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
+        ctx.fillRect(45, 205, 410, 90);
+        ctx.fillStyle = "white";
+        ctx.font = "bold 34px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("Game over!", 250, 245);
+        ctx.font = "20px Arial";
+        ctx.fillText("Press Start / Restart to play again", 250, 275);
         return;
       }
 
       snake.unshift(head);
-      if (head.x === food.x && head.y === food.y) {
+      if (ateApple) {
         score++;
-        document.getElementById("score").textContent = "Score: " + score;
-        food = {
-          x: Math.floor(Math.random() * (canvas.width / size)) * size,
-          y: Math.floor(Math.random() * (canvas.height / size)) * size
-        };
+        updateScore();
+        placeApple();
       } else {
         snake.pop();
       }
@@ -69,13 +142,97 @@
     }
 
     function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "red";
-      ctx.fillRect(food.x, food.y, size, size);
-      ctx.fillStyle = "green";
-      snake.forEach(part => ctx.fillRect(part.x, part.y, size, size));
+      ctx.fillStyle = "#d8f0bb";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Soft grass-like background marks
+      ctx.strokeStyle = "rgba(67, 125, 50, 0.12)";
+      ctx.lineWidth = 1;
+      for (let y = 12; y < canvas.height; y += 25) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+
+      // Draw apple
+      const ax = apple.x * tile + tile / 2;
+      const ay = apple.y * tile + tile / 2;
+      ctx.fillStyle = "#dc3030";
+      ctx.beginPath();
+      ctx.arc(ax, ay + 2, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#65a83d";
+      ctx.beginPath();
+      ctx.ellipse(ax + 5, ay - 10, 7, 3, -0.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#65452b";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(ax, ay - 7);
+      ctx.lineTo(ax + 1, ay - 13);
+      ctx.stroke();
+
+      // Draw rounded green snake segments
+      snake.forEach((part, index) => {
+        const x = part.x * tile + 2;
+        const y = part.y * tile + 2;
+        const isHead = index === 0;
+
+        ctx.fillStyle = isHead ? "#287d2d" : (index % 2 ? "#43a83d" : "#379633");
+        ctx.beginPath();
+        ctx.roundRect(x, y, tile - 4, tile - 4, 9);
+        ctx.fill();
+
+        // Small scales on the body
+        if (!isHead) {
+          ctx.fillStyle = "rgba(190, 239, 121, 0.65)";
+          ctx.beginPath();
+          ctx.arc(x + 8, y + 8, 2, 0, Math.PI * 2);
+          ctx.arc(x + 16, y + 15, 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+
+      // Snake face and forked tongue
+      const head = snake[0];
+      const hx = head.x * tile + tile / 2;
+      const hy = head.y * tile + tile / 2;
+      let eye1, eye2, tongueEnd;
+
+      if (direction.x === 1) {
+        eye1 = [hx + 5, hy - 6]; eye2 = [hx + 5, hy + 6]; tongueEnd = [hx + 16, hy];
+      } else if (direction.x === -1) {
+        eye1 = [hx - 5, hy - 6]; eye2 = [hx - 5, hy + 6]; tongueEnd = [hx - 16, hy];
+      } else if (direction.y === -1) {
+        eye1 = [hx - 6, hy - 5]; eye2 = [hx + 6, hy - 5]; tongueEnd = [hx, hy - 16];
+      } else {
+        eye1 = [hx - 6, hy + 5]; eye2 = [hx + 6, hy + 5]; tongueEnd = [hx, hy + 16];
+      }
+
+      [eye1, eye2].forEach(([x, y]) => {
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.arc(x, y, 3.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#111";
+        ctx.beginPath();
+        ctx.arc(x, y, 1.7, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      ctx.strokeStyle = "#e74352";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(hx, hy);
+      ctx.lineTo(tongueEnd[0], tongueEnd[1]);
+      ctx.lineTo(tongueEnd[0] + (direction.y === 0 ? 0 : 5), tongueEnd[1] + (direction.x === 0 ? 0 : 5));
+      ctx.moveTo(tongueEnd[0], tongueEnd[1]);
+      ctx.lineTo(tongueEnd[0] - (direction.y === 0 ? 0 : 5), tongueEnd[1] - (direction.x === 0 ? 0 : 5));
+      ctx.stroke();
     }
 
+    document.getElementById("start").addEventListener("click", startGame);
     startGame();
   </script>
 </body>
